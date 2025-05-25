@@ -14,9 +14,10 @@ dos2unix deploy-singbox.sh
 How to Re-install:
 
 1. Stop the running sing-box service:
+
 systemctl stop sing-box
 
-2. Remove (optional, but for clean start):
+3. Remove (optional, but for clean start):
 rm -rf /etc/sing-box/
 rm -f /usr/local/bin/sing-box
 
