@@ -1,7 +1,9 @@
 Install:
 
 wget https://raw.githubusercontent.com/rayye515/singbox-installer-script/main/deploy-singbox.sh
+
 chmod +x deploy-singbox.sh
+
 dos2unix deploy-singbox.sh 
 
 ./deploy-singbox.sh
@@ -19,7 +21,6 @@ systemctl stop sing-box
 rm -rf /etc/sing-box/
 rm -f /usr/local/bin/sing-box
 
-3. 
 
 
 
