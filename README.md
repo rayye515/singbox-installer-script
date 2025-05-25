@@ -18,7 +18,9 @@ How to Re-install:
 systemctl stop sing-box
 
 3. Remove (optional, but for clean start):
+
 rm -rf /etc/sing-box/
+
 rm -f /usr/local/bin/sing-box
 
 
