@@ -1,4 +1,4 @@
-Install:
+How to Install:
 
 wget https://raw.githubusercontent.com/rayye515/singbox-installer-script/main/deploy-singbox.sh
 
@@ -11,8 +11,7 @@ dos2unix deploy-singbox.sh
 
 
 
-
-Re-install:
+How to Re-install:
 
 1. Stop the running sing-box service:
 systemctl stop sing-box
