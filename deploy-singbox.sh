@@ -1,11 +1,10 @@
 #!/bin/bash
 
-# Sing-box Reality Installer Script (auto keygen, VLESS link, interactive domain/uuid)
-# Compatible: Ubuntu/Debian
+# =======================
+# Sing-box Reality Auto-Installer & VLESS Link Generator
+# =======================
 
-# ==========================
-# STEP 1: User Input
-# ==========================
+# --------- Step 1: User Input ---------
 read -rp "Enter your domain (e.g., mydomain.com): " DOMAIN
 read -rp "Enter SNI (default: www.cloudflare.com): " SNI
 SNI=${SNI:-www.cloudflare.com}
@@ -16,14 +15,10 @@ UUID=${UUID:-$(cat /proc/sys/kernel/random/uuid)}
 PORT=443
 FINGERPRINT="chrome"
 
-# ==========================
-# STEP 2: Dependencies
-# ==========================
+# --------- Step 2: Dependencies ---------
 apt update && apt install -y wget unzip curl jq
 
-# ==========================
-# STEP 3: Download Sing-box
-# ==========================
+# --------- Step 3: Download Sing-box ---------
 cd /root
 LATEST=$(curl -s https://api.github.com/repos/SagerNet/sing-box/releases/latest | jq -r .tag_name)
 wget -q https://github.com/SagerNet/sing-box/releases/download/$LATEST/sing-box-${LATEST#v}-linux-amd64.tar.gz
@@ -31,16 +26,12 @@ tar -xzf sing-box-*-linux-amd64.tar.gz
 mv sing-box-*/sing-box /usr/local/bin/
 chmod +x /usr/local/bin/sing-box
 
-# ==========================
-# STEP 4: Generate Reality Key Pair
-# ==========================
-KEYPAIR_JSON=$(sing-box generate reality-keypair)
-PRIVATE_KEY=$(echo "$KEYPAIR_JSON" | grep private_key | awk -F'"' '{print $4}')
-PUBLIC_KEY=$(echo "$KEYPAIR_JSON" | grep public_key | awk -F'"' '{print $4}')
+# --------- Step 4: Generate Reality Key Pair (correct parsing) ---------
+KEYPAIR_OUTPUT=$(sing-box generate reality-keypair)
+PRIVATE_KEY=$(echo "$KEYPAIR_OUTPUT" | grep 'PrivateKey' | awk '{print $2}')
+PUBLIC_KEY=$(echo "$KEYPAIR_OUTPUT" | grep 'PublicKey' | awk '{print $2}')
 
-# ==========================
-# STEP 5: Create Config
-# ==========================
+# --------- Step 5: Create Sing-box Config ---------
 mkdir -p /etc/sing-box
 cat <<EOF > /etc/sing-box/config.json
 {
@@ -69,9 +60,7 @@ cat <<EOF > /etc/sing-box/config.json
 }
 EOF
 
-# ==========================
-# STEP 6: Systemd Service
-# ==========================
+# --------- Step 6: Create systemd Service ---------
 cat <<EOF > /etc/systemd/system/sing-box.service
 [Unit]
 Description=Sing-box Service
@@ -90,9 +79,7 @@ systemctl daemon-reload
 systemctl enable sing-box
 systemctl restart sing-box
 
-# ==========================
-# STEP 7: Output Connection Info
-# ==========================
+# --------- Step 7: Output Connection Info ---------
 echo "============================================"
 echo "✅ Sing-box installed and running at $DOMAIN:$PORT"
 echo "----------- Connection Info ---------------"
