@@ -1,10 +1,13 @@
 #!/bin/bash
+set -e
 
-# =======================
-# Sing-box Reality Auto-Installer & VLESS Link Generator
-# =======================
+# ========== Sing-box Reality Automated Installer ==========
 
-# --------- Step 1: User Input ---------
+echo "=============================="
+echo "      Sing-box Reality Installer"
+echo "=============================="
+
+# 1. Get user input
 read -rp "Enter your domain (e.g., mydomain.com): " DOMAIN
 read -rp "Enter SNI (default: www.cloudflare.com): " SNI
 SNI=${SNI:-www.cloudflare.com}
@@ -15,23 +18,43 @@ UUID=${UUID:-$(cat /proc/sys/kernel/random/uuid)}
 PORT=443
 FINGERPRINT="chrome"
 
-# --------- Step 2: Dependencies ---------
-apt update && apt install -y wget unzip curl jq
+# 2. Install dependencies
+echo "[*] Installing dependencies..."
+apt update -y && apt install -y wget unzip curl jq
 
-# --------- Step 3: Download Sing-box ---------
+# 3. Download and install sing-box
+echo "[*] Downloading sing-box..."
 cd /root
 LATEST=$(curl -s https://api.github.com/repos/SagerNet/sing-box/releases/latest | jq -r .tag_name)
-wget -q https://github.com/SagerNet/sing-box/releases/download/$LATEST/sing-box-${LATEST#v}-linux-amd64.tar.gz
+wget -q "https://github.com/SagerNet/sing-box/releases/download/${LATEST}/sing-box-${LATEST#v}-linux-amd64.tar.gz"
 tar -xzf sing-box-*-linux-amd64.tar.gz
 mv sing-box-*/sing-box /usr/local/bin/
 chmod +x /usr/local/bin/sing-box
 
-# --------- Step 4: Generate Reality Key Pair (correct parsing) ---------
-KEYPAIR_OUTPUT=$(sing-box generate reality-keypair)
+if ! command -v sing-box >/dev/null 2>&1; then
+    echo "❌ Error: sing-box is not installed or not in PATH."
+    exit 1
+fi
+
+# 4. Generate Reality key pair with error checking
+echo "[*] Generating Reality keypair..."
+KEYPAIR_OUTPUT=$(/usr/local/bin/sing-box generate reality-keypair 2>/dev/null)
+if [[ $? -ne 0 || -z "$KEYPAIR_OUTPUT" ]]; then
+    echo "❌ Error: sing-box key pair generation failed."
+    exit 1
+fi
+
 PRIVATE_KEY=$(echo "$KEYPAIR_OUTPUT" | grep 'PrivateKey' | awk '{print $2}')
 PUBLIC_KEY=$(echo "$KEYPAIR_OUTPUT" | grep 'PublicKey' | awk '{print $2}')
 
-# --------- Step 5: Create Sing-box Config ---------
+if [[ -z "$PRIVATE_KEY" || -z "$PUBLIC_KEY" ]]; then
+    echo "❌ Error: Could not extract keys from sing-box output:"
+    echo "$KEYPAIR_OUTPUT"
+    exit 1
+fi
+
+# 5. Write config
+echo "[*] Writing sing-box configuration..."
 mkdir -p /etc/sing-box
 cat <<EOF > /etc/sing-box/config.json
 {
@@ -60,7 +83,8 @@ cat <<EOF > /etc/sing-box/config.json
 }
 EOF
 
-# --------- Step 6: Create systemd Service ---------
+# 6. Create systemd service
+echo "[*] Setting up systemd service..."
 cat <<EOF > /etc/systemd/system/sing-box.service
 [Unit]
 Description=Sing-box Service
@@ -79,7 +103,7 @@ systemctl daemon-reload
 systemctl enable sing-box
 systemctl restart sing-box
 
-# --------- Step 7: Output Connection Info ---------
+# 7. Print all info and ready-to-import VLESS link
 echo "============================================"
 echo "✅ Sing-box installed and running at $DOMAIN:$PORT"
 echo "----------- Connection Info ---------------"
@@ -95,3 +119,6 @@ echo "vless://$UUID@$DOMAIN:$PORT?encryption=none&flow=xtls-rprx-vision&security
 echo "--------------------------------------------"
 echo "⚠️  Copy & import this link into v2rayN, NekoBox, Shadowrocket (with tweaks), or other Reality-compatible clients!"
 echo "============================================"
+
+exit 0
+
